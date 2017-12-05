@@ -2,6 +2,7 @@
 MIT License
 
 Copyright (c) 2016 Mike Estee
+Copyright (c) 2017 Tom Magnier
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -28,26 +29,17 @@ SOFTWARE.
 #include <Arduino.h>
 #include <SPI.h>
 
-
 class Estee_TMC5130 {
-	uint8_t _CS;
-	uint32_t _fclk;
-	SPISettings _spiSettings;
-	SPIClass &_spi;
 public:
-	Estee_TMC5130( uint8_t chipSelectPin,	// pin to use for the SPI bus SS line
-		uint32_t fclk=F_CPU,
-		const SPISettings &spiSettings=SPISettings(1000000, MSBFIRST, SPI_MODE0), // spi bus settings to use
-		SPIClass& spi=SPI ); // spi class to use
+	Estee_TMC5130(uint32_t fclk=F_CPU);
 	~Estee_TMC5130();
 
 	// start/stop this module
 	bool begin(uint8_t ihold, uint8_t irun, uint8_t stepper_direction/*=NORMAL_MOTOR_DIRECTION*/);
 	void end();
 
-	uint32_t readRegister(uint8_t address);	// addresses are from TMC5130.h
-	uint8_t  writeRegister(uint8_t address, uint32_t data);
-	uint8_t  readStatus();
+	virtual uint32_t readRegister(uint8_t address) = 0;	// addresses are from TMC5130.h
+	virtual uint8_t  writeRegister(uint8_t address, uint32_t data) = 0;
 
 	// internal clock measuring
 	// NOTE: Driver MUST BE DISABLED DURING THIS CALL
@@ -57,6 +49,29 @@ public:
 	void setRampCurves() {}
 
 private:
+	uint32_t _fclk;
+};
+
+
+/* SPI interface : 
+ * the TMC5130 SWSEL input has to be low (default state).
+ */
+class Estee_TMC5130_SPI : public Estee_TMC5130 {
+public:
+	Estee_TMC5130_SPI( uint8_t chipSelectPin,	// pin to use for the SPI bus SS line
+		uint32_t fclk=F_CPU,
+		const SPISettings &spiSettings=SPISettings(1000000, MSBFIRST, SPI_MODE0), // spi bus settings to use
+		SPIClass& spi=SPI ); // spi class to use
+
+	uint32_t readRegister(uint8_t address);	// addresses are from TMC5130.h
+	uint8_t  writeRegister(uint8_t address, uint32_t data);
+	uint8_t  readStatus();
+
+private:
+	uint8_t _CS;
+	SPISettings _spiSettings;
+	SPIClass &_spi;
+
 	void _beginTransaction();
 	void _endTransaction();
 };
@@ -192,7 +207,7 @@ private:
 											// sensitive and requires more torque to
 											// indicate a stall.
 #define 	SEIMIN(n)		(((n)&0x1)<<15) // 0: 1/2 of current setting (IRUN)
-											// 1: 1/4 of current setting (IRUN)	
+											// 1: 1/4 of current setting (IRUN)
 #define 	SEDN(n)			(((n)&0x3)<<13) // %00: For each 32 stallGuard2 values decrease by one
 											// %01: For each 8 stallGuard2 values decrease by one
 											// %10: For each 2 stallGuard2 values decrease by one

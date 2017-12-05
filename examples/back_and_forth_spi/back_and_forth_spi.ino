@@ -6,7 +6,7 @@ uint8_t TMC_CS = PIN_A5;  // Chip select, Active LOW. next to SCK/MOSI/MISO on t
 uint8_t TMC_EN = 10;      // Drive enable pin. Active LOW. Optional, you can also just tie to ground
 uint8_t BLE_CS = 8;       // Hidden pin #8 which controls the SS line for the Bluetooth module SPI comms
 
-Estee_TMC5130 tmc = Estee_TMC5130(TMC_CS);
+Estee_TMC5130_SPI tmc = Estee_TMC5130_SPI(TMC_CS);
 
 void setup()
 {
@@ -19,7 +19,7 @@ void setup()
   digitalWrite(TMC_EN, HIGH); // disabled for start
   pinMode(TMC_CS, OUTPUT);
   digitalWrite(TMC_EN, HIGH);
-  
+
   // disable BLE talking on SPI bus
 #if defined(ARDUINO_SAMD_ZERO)
   pinMode(BLE_CS, OUTPUT);
@@ -63,7 +63,7 @@ bool dir = false;
 void loop()
 {
   uint32_t now = millis();
-  
+
   // every n seconds or so...
   if ( now - t_dirchange > 3000 )
   {

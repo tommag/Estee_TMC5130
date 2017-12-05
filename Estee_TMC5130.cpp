@@ -2,6 +2,7 @@
 MIT License
 
 Copyright (c) 2016 Mike Estee
+Copyright (c) 2017 Tom Magnier
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,8 +25,8 @@ SOFTWARE.
 
 #include "Estee_TMC5130.h"
 
-Estee_TMC5130::Estee_TMC5130( uint8_t chipSelectPin, uint32_t fclk, const SPISettings &spiSettings, SPIClass &spi )
-: _CS(chipSelectPin), _fclk(fclk), _spiSettings(spiSettings), _spi(spi)
+Estee_TMC5130::Estee_TMC5130(uint32_t fclk)
+: _fclk(fclk)
 {
 
 }
@@ -84,92 +85,3 @@ float Estee_TMC5130::updateFrequencyScaling()
 	// scaling factor
 	return (vmax * (dt_ms/1000.0)) / (xactual2 - xactual1);
 }
-
-#pragma mark -
-
-// calls to read/write registers must be bracketed by the begin/endTransaction calls
-
-void _chipSelect( uint8_t pin, bool select )
-{
-	digitalWrite(pin, select?LOW:HIGH);
-	if( select )
-		delayMicroseconds(100);   // per spec, settling time is 100us
-}
-
-void Estee_TMC5130::_beginTransaction()
-{
-	_spi.beginTransaction(_spiSettings);
-	_chipSelect(_CS, true);
-}
-
-void Estee_TMC5130::_endTransaction()
-{
-	_chipSelect(_CS, false);
-	_spi.endTransaction();
-}
-
-uint32_t Estee_TMC5130::readRegister(uint8_t address)
-{
-	// request the read for the address
-	_beginTransaction();
-	_spi.transfer(address);
-	_spi.transfer(0x00);
-	_spi.transfer(0x00);
-	_spi.transfer(0x00);
-	_spi.transfer(0x00);
-	_endTransaction();
-
-	// skip a beat
-	#define nop() asm volatile("nop")
-	nop();
-	nop();
-	nop();
-
-	// read it in the second cycle
-	_beginTransaction();
-	_spi.transfer(address);
-	uint32_t value = 0;
-	value |= _spi.transfer(0x00) << 24;
-	value |= _spi.transfer(0x00) << 16;
-	value |= _spi.transfer(0x00) << 8;
-	value |= _spi.transfer(0x00);
-	_endTransaction();
-
-	return value;
-}
-
-uint8_t Estee_TMC5130::writeRegister(uint8_t address, uint32_t data)
-{
-	// address register
-	_beginTransaction();
-	uint8_t status = _spi.transfer(address | WRITE_ACCESS);
-
-	// send new register value
-	_spi.transfer((data & 0xFF000000) >> 24);
-	_spi.transfer((data & 0xFF0000) >> 16);
-	_spi.transfer((data & 0xFF00) >> 8);
-	_spi.transfer(data & 0xFF);
-	_endTransaction();
-
-	return status;
-}
-
-
-uint8_t Estee_TMC5130::readStatus()
-{
- 	// read general config
- 	_beginTransaction();
- 	uint8_t status = _spi.transfer(GCONF);
- 	// send dummy data
- 	_spi.transfer(0x00);
- 	_spi.transfer(0x00);
- 	_spi.transfer(0x00);
- 	_spi.transfer(0x00);
- 	_endTransaction();
-
-	return status;
-}
-
-
-#pragma mark -
-
