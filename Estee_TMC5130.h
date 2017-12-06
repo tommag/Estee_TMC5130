@@ -77,6 +77,87 @@ private:
 };
 
 
+/* Base UART interface :
+ * the TMC5130 SWSEL input must be tied high.
+ *
+ * This class does not handle TX/RX switch on the half-duplex bus.
+ * It should be used only if there is another mechanism to switch between
+ * transmission and reception (e.g. on Teensy the Serial class can be configured
+ * to control an external transceiver).
+ *
+ * Serial must be initialized externally. Serial.setTimeout() must be set to a
+ * decent value to avoid blocking for too long if there is a RX error.
+ */
+class Estee_TMC5130_UART : public Estee_TMC5130 {
+public:
+	Estee_TMC5130_UART(Stream& serial=Serial, // Serial port to use
+		uint8_t slaveAddress = 0, // TMC5130 slave address (default 0 if NAI is low, 1 if NAI is high)
+		uint32_t fclk=F_CPU);
+
+	uint32_t readRegister(uint8_t address);	// addresses are from TMC5130.h
+	//TODO read operation status
+	uint8_t  writeRegister(uint8_t address, uint32_t data);
+
+	void setSlaveAddress(uint8_t slaveAddress);
+
+	//TODO handle communication reset ?
+
+
+protected:
+	Stream &_serial;
+	uint8_t _slaveAddress;
+
+	virtual void beginTransmission() {}
+	virtual void endTransmission() {}
+
+private:
+	const uint8_t SYNC_BYTE = 0x05;
+
+	void computeCrc(uint8_t *datagram, uint8_t datagramLength);
+};
+
+
+/* UART interface with external transceiver support :
+ * the TMC5130 SWSEL input must be tied high.
+ * See TMC5130 datasheet §5.4 figure 5.2 for wiring details
+ *
+ * This interface switches a digital pin to control an external transceiver to
+ * free the bus when not transmitting.
+ *
+ * This is not optimized : the interface has to wait for the end of the
+ * transmission.
+ *
+ * Serial must be initialized externally. Serial.setTimeout() must be set to a
+ * decent value to avoid blocking for too long if there is a RX error.
+ */
+class Estee_TMC5130_UART_Transceiver : public Estee_TMC5130_UART {
+public:
+	Estee_TMC5130_UART_Transceiver(uint8_t txEnablePin, // pin to enable transmission on the external transceiver
+		Stream& serial=Serial, // Serial port to use
+		uint8_t slaveAddress = 0, // TMC5130 slave address (default 0 if NAI is low, 1 if NAI is high)
+		uint32_t fclk=F_CPU)
+	: Estee_TMC5130_UART(serial, slaveAddress, fclk), _txEn(txEnablePin)
+	{
+		pinMode(_txEn, OUTPUT);
+	}
+
+protected:
+	void beginTransmission()
+	{
+		digitalWrite(_txEn, HIGH);
+	}
+
+	void endTransmission()
+	{
+		_serial.flush();
+		digitalWrite(_txEn, LOW);
+	}
+
+private:
+	uint8_t _txEn;
+};
+
+
 // TRINAMIC TMC5130 Register Address Defines
 #define GCONF				0x00 	//Global configuration flags
 #define X_COMPARE 			0x05	//Position  comparison  register
