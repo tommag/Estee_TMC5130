@@ -88,6 +88,17 @@ uint8_t Estee_TMC5130_UART::writeRegister(uint8_t address, uint32_t data)
 	return 0;
 }
 
+void Estee_TMC5130_UART::resetCommunication()
+{
+	//FIXME should take into account the previous baud rate !
+	// For now let's wait 1ms. The spec asks for ~75 bit times so this should be OK for baud rates > 75kbps
+	delay(1);
+
+	//Flush input buffer.
+	while (_serial.available())
+		_serial.read();
+}
+
 void Estee_TMC5130_UART::setSlaveAddress(uint8_t slaveAddress)
 {
 	_slaveAddress = slaveAddress;

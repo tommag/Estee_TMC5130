@@ -101,9 +101,10 @@ public:
 	uint32_t readRegister(uint8_t address) { return readRegister(address, nullptr); }
 	uint8_t  writeRegister(uint8_t address, uint32_t data);
 
+	void resetCommunication(); // Reset communication with TMC5130 : pause activity on the serial bus.
+
 	void setSlaveAddress(uint8_t slaveAddress);
 
-	//TODO handle communication reset ?
 	//TODO add optional internal checks (reg write counter, retry in case of bad CRC)
 
 
