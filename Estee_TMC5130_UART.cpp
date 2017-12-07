@@ -30,7 +30,7 @@ Estee_TMC5130_UART::Estee_TMC5130_UART(Stream& serial, uint8_t slaveAddress, uin
 
 }
 
-uint32_t Estee_TMC5130_UART::readRegister(uint8_t address)
+uint32_t Estee_TMC5130_UART::readRegister(uint8_t address, ReadStatus *status)
 {
 	uint8_t outBuffer[4], inBuffer[8];
 
@@ -45,18 +45,28 @@ uint32_t Estee_TMC5130_UART::readRegister(uint8_t address)
 	endTransmission();
 
 	if (_serial.readBytes(inBuffer, 8) != 8) //Stream.setTimeout has to be set to a decent value to avoid blocking
-		return 0xFFFFFFFF; //TODO return error code
+	{
+		if (status != nullptr)
+			*status = NO_REPLY;
+		return 0xFFFFFFFF;
+	}
 
 	uint8_t receivedCrc = inBuffer[7];
 	computeCrc(inBuffer, 8);
 
 	if (receivedCrc != inBuffer[7])
-		return 0xFFFFFFFF; //TODO return error code
+	{
+		if (status != nullptr)
+			*status = BAD_CRC;
+		return 0xFFFFFFFF;
+	}
 
 	uint32_t data = 0;
 	for (int i = 0; i < 4; i++)
 		data += (inBuffer[3+i] << ((3-i)*8));
 
+	if (status != nullptr)
+		*status = SUCCESS;
 	return data;
 }
 

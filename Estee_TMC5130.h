@@ -90,17 +90,21 @@ private:
  */
 class Estee_TMC5130_UART : public Estee_TMC5130 {
 public:
+	/* Read register return codes */
+	enum ReadStatus {SUCCESS, NO_REPLY, BAD_CRC};
+
 	Estee_TMC5130_UART(Stream& serial=Serial, // Serial port to use
 		uint8_t slaveAddress = 0, // TMC5130 slave address (default 0 if NAI is low, 1 if NAI is high)
 		uint32_t fclk=F_CPU);
 
-	uint32_t readRegister(uint8_t address);	// addresses are from TMC5130.h
-	//TODO read operation status
+	uint32_t readRegister(uint8_t address, ReadStatus *status);	// addresses are from TMC5130.h. Pass an optional status pointer to detect failures.
+	uint32_t readRegister(uint8_t address) { return readRegister(address, nullptr); }
 	uint8_t  writeRegister(uint8_t address, uint32_t data);
 
 	void setSlaveAddress(uint8_t slaveAddress);
 
 	//TODO handle communication reset ?
+	//TODO add optional internal checks (reg write counter, retry in case of bad CRC)
 
 
 protected:
