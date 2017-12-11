@@ -104,7 +104,7 @@ uint8_t Estee_TMC5130_SPI::readStatus()
 {
  	// read general config
  	_beginTransaction();
- 	uint8_t status = _spi.transfer(GCONF);
+ 	uint8_t status = _spi.transfer(TMC5130_Reg::GCONF);
  	// send dummy data
  	_spi.transfer(0x00);
  	_spi.transfer(0x00);

@@ -27,7 +27,7 @@ void setup()
 #endif
 
   // This sets the motor currents for HOLD & RUN, as well as the natural motor direction for positive moves
-  tmc.begin(0x4, 0x4, NORMAL_MOTOR_DIRECTION);
+  tmc.begin(4, 4, Estee_TMC5130::NORMAL_MOTOR_DIRECTION);
 
   // drive *MUST* be disabled when testing frequency scaling
 //  digitalWrite(TMC_EN, HIGH);
@@ -38,16 +38,16 @@ void setup()
 
   // ramp definition
   uint32_t onerev = 200*256;
-  tmc.writeRegister(VSTART, 0x0);
-  tmc.writeRegister(A_1, 1000);
-  tmc.writeRegister(V_1, 50000);
-  tmc.writeRegister(AMAX, 500);
-  tmc.writeRegister(VMAX, 200000);
-  tmc.writeRegister(DMAX, 700);
-  tmc.writeRegister(D_1, 1400);
-  tmc.writeRegister(VSTOP, 10);
-  tmc.writeRegister(TZEROWAIT, 0);
-  tmc.writeRegister(RAMPMODE, 0);
+  tmc.writeRegister(TMC5130_Reg::VSTART, 0x0);
+  tmc.writeRegister(TMC5130_Reg::A_1, 1000);
+  tmc.writeRegister(TMC5130_Reg::V_1, 50000);
+  tmc.writeRegister(TMC5130_Reg::AMAX, 500);
+  tmc.writeRegister(TMC5130_Reg::VMAX, 200000);
+  tmc.writeRegister(TMC5130_Reg::DMAX, 700);
+  tmc.writeRegister(TMC5130_Reg::D_1, 1400);
+  tmc.writeRegister(TMC5130_Reg::VSTOP, 10);
+  tmc.writeRegister(TMC5130_Reg::TZEROWAIT, 0);
+  tmc.writeRegister(TMC5130_Reg::RAMPMODE, TMC5130_Reg::POSITIONING_MODE);
 
   Serial.println("starting up");
 
@@ -71,7 +71,7 @@ void loop()
 
     // reverse direction
     dir = !dir;
-    tmc.writeRegister(XTARGET, dir?(200*256):0);  // 1 full rotatation = 200s/rev * 256microsteps
+    tmc.writeRegister(TMC5130_Reg::XTARGET, dir?(200*256):0);  // 1 full rotatation = 200s/rev * 256microsteps
   }
 
   // print out current position
@@ -81,8 +81,8 @@ void loop()
 
     // get the current target position
     int32_t xactual = 0, vactual = 0;
-    xactual = tmc.readRegister(XACTUAL);
-    vactual = tmc.readRegister(VACTUAL);
+    xactual = tmc.readRegister(TMC5130_Reg::XACTUAL);
+    vactual = tmc.readRegister(TMC5130_Reg::VACTUAL);
 
     Serial.print("xpos,v:");
     Serial.print(xactual);

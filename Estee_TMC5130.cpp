@@ -37,25 +37,36 @@ Estee_TMC5130::~Estee_TMC5130()
 }
 
 
-bool Estee_TMC5130::begin( uint8_t ihold, uint8_t irun, uint8_t stepper_direction )
+bool Estee_TMC5130::begin( uint8_t ihold, uint8_t irun, MotorDirection stepper_direction )
 {
 	// set initial currents and delay
-	uint32_t iholdrun = SET_IHOLD(ihold) | SET_IRUN(irun) | SET_IHOLDDELAY(7);
-	writeRegister(IHOLD_IRUN, iholdrun );
+	TMC5130_Reg::IHOLD_IRUN_Register iholdrun = { 0 };
+	iholdrun.ihold = ihold;
+	iholdrun.irun = irun;
+	iholdrun.iholddelay = 7;
+	writeRegister(TMC5130_Reg::IHOLD_IRUN, iholdrun.value);
 
 	// use position mode
-	writeRegister(RAMPMODE, 0x0 );
+	writeRegister(TMC5130_Reg::RAMPMODE, TMC5130_Reg::POSITIONING_MODE);
 
 	// set ramp curves
-	//writeRegister(A_1, 0xffff );
-	writeRegister(V_1, 0x0 ); // disable A1 & D1 in position mode, amax, vmax only
-	writeRegister(AMAX, 0xffff );
-	writeRegister(VMAX, 0xffff );
-	//writeRegister(DMAX, 0xffff );
+	//writeRegister(TMC5130_Reg::A_1, 0xffff );
+	writeRegister(TMC5130_Reg::V_1, 0x0 ); // disable A1 & D1 in position mode, amax, vmax only
+	writeRegister(TMC5130_Reg::AMAX, 0xffff );
+	writeRegister(TMC5130_Reg::VMAX, 0xffff );
+	//writeRegister(TMC5130_Reg::DMAX, 0xffff );
 
 	// set chopper config
-	writeRegister(CHOPCONF, 0x00010085);//0x140101D5);
-	writeRegister(GCONF, 0x1084 | stepper_direction);
+	TMC5130_Reg::CHOPCONF_Register chopconf = { 0 };
+	chopconf.toff = 5;
+	chopconf.hend_offset = 1;
+	chopconf.tbl = 0b10;
+	writeRegister(TMC5130_Reg::CHOPCONF, chopconf.value);
+
+	TMC5130_Reg::GCONF_Register gconf = { 0 };
+	gconf.en_pwm_mode = true;
+	gconf.shaft = stepper_direction;
+	writeRegister(TMC5130_Reg::GCONF, gconf.value);
 
 	return false;
 }
@@ -73,14 +84,14 @@ float Estee_TMC5130::updateFrequencyScaling()
 	int32_t vmax = 10000;
 	int32_t dt_ms = 100;
 
-	writeRegister(VMAX, 0);
-	writeRegister(RAMPMODE, 1);	// velocity mode
-	writeRegister(AMAX, 60000);
-	writeRegister(VMAX, vmax);
-	int32_t xactual1 = readRegister(XACTUAL);
+	writeRegister(TMC5130_Reg::VMAX, 0);
+	writeRegister(TMC5130_Reg::RAMPMODE, TMC5130_Reg::VELOCITY_MODE_POS);
+	writeRegister(TMC5130_Reg::AMAX, 60000);
+	writeRegister(TMC5130_Reg::VMAX, vmax);
+	int32_t xactual1 = readRegister(TMC5130_Reg::XACTUAL);
 	delay(dt_ms);
-	int32_t xactual2 = readRegister(XACTUAL);
-	writeRegister(VMAX,0);	// halt
+	int32_t xactual2 = readRegister(TMC5130_Reg::XACTUAL);
+	writeRegister(TMC5130_Reg::VMAX,0);	// halt
 
 	// scaling factor
 	return (vmax * (dt_ms/1000.0)) / (xactual2 - xactual1);
