@@ -115,9 +115,15 @@ void Estee_TMC5130_UART::resetCommunication()
 		_serial.read();
 }
 
-void Estee_TMC5130_UART::setSlaveAddress(uint8_t slaveAddress)
+void Estee_TMC5130_UART::setSlaveAddress(uint8_t slaveAddress, bool NAI)
 {
-	_slaveAddress = slaveAddress;
+	TMC5130_Reg::SLAVECONF_Register slaveConf = { 0 };
+	slaveConf.senddelay = 2; // minimum if more than one slave is present.
+	slaveConf.slaveaddr = constrain(NAI ? slaveAddress-1 : slaveAddress, 0, 253); //NB : if NAI is high SLAVE_ADDR is incremented.
+
+	writeRegister(TMC5130_Reg::SLAVECONF, slaveConf.value);
+
+	_slaveAddress = NAI ? slaveConf.slaveaddr+1 : slaveConf.slaveaddr;
 }
 
 /* From Trinamic TMC5130A datasheet Rev. 1.14 / 2017-MAY-15 §5.2 */
