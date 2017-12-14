@@ -35,8 +35,9 @@ public:
 	static constexpr uint8_t IC_VERSION = 0x11;
 
 	enum MotorDirection { NORMAL_MOTOR_DIRECTION =	0x00, INVERSE_MOTOR_DIRECTION = 0x1 };
+	enum RampMode { POSITIONING_MODE, VELOCITY_MODE, HOLD_MODE };
 
-	Estee_TMC5130(uint32_t fclk=F_CPU);
+	Estee_TMC5130(uint32_t fclk=DEFAULT_F_CLK);
 	~Estee_TMC5130();
 
 	// start/stop this module
@@ -50,14 +51,42 @@ public:
 	// NOTE: Driver MUST BE DISABLED DURING THIS CALL
 	float updateFrequencyScaling();
 
-	// high level interface
-	void setRampCurves() {}
+	/* Ramp mode selection :
+		- Positioning mode : autonomous move to XTARGET using all A, D and V parameters.
+		- Velocity mode : follows VMAX and AMAX. Call setMaxSpeed() AFTER switching to velocity mode.
+		- Hold mode : Keep current velocity until a stop event occurs.
+	*/
+	void setRampMode(RampMode mode);
+
+	long getCurrentPosition(); // Return the current internal position (steps)
+	long getTargetPosition(); // Get the target position (steps)
+	float getCurrentSpeed(); // Return the current speed (steps / second)
+
+	void setCurrentPosition(long position); // Set the current internal position (steps)
+	void setTargetPosition(long position); // Set the target position /!\ Set all other motion profile parameters before
+	void setMaxSpeed(float speed); // Set the max speed VMAX (steps/second)
+	void setRampSpeeds(float startSpeed, float stopSpeed, float transitionSpeed); // Set the ramp start speed VSTART, ramp stop speed VSTOP, acceleration transition speed V1 (steps / second). /!\ Set VSTOP >= VSTART, VSTOP >= 0.1
+	void setAccelerations(float maxAccel, float maxDecel, float startAccel, float finalDecel); // Set the ramp accelerations AMAX, DMAX, A1, D1 (steps / second^2)
+
+	void stop(); // Stop the current motion according to the set ramp mode and motion parameters. The max speed and start speed are set to 0 but the target position stays unchanged.
 
 protected:
 	static constexpr uint8_t WRITE_ACCESS = 0x80;	//Register write access for spi / uart communication
+	static constexpr uint32_t DEFAULT_F_CLK = 13200000; // Typical internal clock frequency in Hz.
 
 private:
 	uint32_t _fclk;
+	RampMode _currentRampMode;
+	const uint16_t _uStepCount = 256; // Number of microsteps per step
+
+	// Following §14.1 Real world unit conversions
+	// v[Hz] = v[5130A] * ( f CLK [Hz]/2 / 2^23 )
+	float speedToHz(long speedInternal) { return ((float)speedInternal * (float)_fclk / (float)(1 << 24) / (float)_uStepCount); }
+	long speedFromHz(float speedHz) { return (long)(speedHz / ((float)_fclk / (float)(1 << 24)) * (float)_uStepCount); }
+
+	// Following §14.1 Real world unit conversions
+	// a[Hz/s] = a[5130A] * f CLK [Hz]^2 / (512*256) / 2^24
+	long accelFromHz(float accelHz) { return (long)(accelHz / ((float)_fclk * (float)_fclk / (512.0*256.0) / (float)(1<<24)) * (float)_uStepCount); }
 };
 
 
@@ -67,7 +96,7 @@ private:
 class Estee_TMC5130_SPI : public Estee_TMC5130 {
 public:
 	Estee_TMC5130_SPI( uint8_t chipSelectPin,	// pin to use for the SPI bus SS line
-		uint32_t fclk=F_CPU,
+		uint32_t fclk=DEFAULT_F_CLK,
 		const SPISettings &spiSettings=SPISettings(1000000, MSBFIRST, SPI_MODE0), // spi bus settings to use
 		SPIClass& spi=SPI ); // spi class to use
 
@@ -103,7 +132,7 @@ public:
 
 	Estee_TMC5130_UART(Stream& serial=Serial, // Serial port to use
 		uint8_t slaveAddress = 0, // TMC5130 slave address (default 0 if NAI is low, 1 if NAI is high)
-		uint32_t fclk=F_CPU);
+		uint32_t fclk=DEFAULT_F_CLK);
 
 	uint32_t readRegister(uint8_t address, ReadStatus *status);	// addresses are from TMC5130.h. Pass an optional status pointer to detect failures.
 	uint32_t readRegister(uint8_t address) { return readRegister(address, nullptr); }
@@ -148,7 +177,7 @@ public:
 	Estee_TMC5130_UART_Transceiver(uint8_t txEnablePin, // pin to enable transmission on the external transceiver
 		Stream& serial=Serial, // Serial port to use
 		uint8_t slaveAddress = 0, // TMC5130 slave address (default 0 if NAI is low, 1 if NAI is high)
-		uint32_t fclk=F_CPU)
+		uint32_t fclk=DEFAULT_F_CLK)
 	: Estee_TMC5130_UART(serial, slaveAddress, fclk), _txEn(txEnablePin)
 	{
 		pinMode(_txEn, OUTPUT);

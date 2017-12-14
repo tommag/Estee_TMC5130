@@ -66,7 +66,7 @@ void setup()
 {
   // init serial coms
   Serial.begin(9600);
-  while(!Serial);
+  //while (!Serial); //Wait for serial monitor opening on USB boards
 
   // Init TMC serial bus @ 250kbps
   Serial1.begin(250000);
@@ -86,17 +86,10 @@ void setup()
   //  delay(5000);
 
   // ramp definition
-  uint32_t onerev = 200*256;
-  tmc.writeRegister(TMC5130_Reg::VSTART, 0x0);
-  tmc.writeRegister(TMC5130_Reg::A_1, 1000);
-  tmc.writeRegister(TMC5130_Reg::V_1, 50000);
-  tmc.writeRegister(TMC5130_Reg::AMAX, 500);
-  tmc.writeRegister(TMC5130_Reg::VMAX, 200000);
-  tmc.writeRegister(TMC5130_Reg::DMAX, 700);
-  tmc.writeRegister(TMC5130_Reg::D_1, 1400);
-  tmc.writeRegister(TMC5130_Reg::VSTOP, 10);
-  tmc.writeRegister(TMC5130_Reg::TZEROWAIT, 0);
-  tmc.writeRegister(TMC5130_Reg::RAMPMODE, TMC5130_Reg::POSITIONING_MODE);
+  tmc.setRampMode(Estee_TMC5130::POSITIONING_MODE);
+  tmc.setMaxSpeed(200);
+  tmc.setRampSpeeds(0, 0.1, 100); //Start, stop, threshold speeds
+  tmc.setAccelerations(250, 350, 500, 700); //AMAX, DMAX, A1, D1
 
   Serial.println("starting up");
 }
@@ -117,7 +110,7 @@ void loop()
 
     // reverse direction
     dir = !dir;
-    tmc.writeRegister(TMC5130_Reg::XTARGET, dir?(200*256):0);  // 1 full rotatation = 200s/rev * 256microsteps
+    tmc.setTargetPosition(dir ? 200 : 0);  // 1 full rotation = 200s/rev
 
     digitalWrite(LED_BUILTIN, dir);
   }
@@ -130,9 +123,8 @@ void loop()
     // get the current target position
     // NB : reading out registers while they are changing is not recommended with UART interface and will probably fail.
     // See datasheet §5.1.2
-    int32_t xactual = 0, vactual = 0;
-    xactual = tmc.readRegister(TMC5130_Reg::XACTUAL);
-    vactual = tmc.readRegister(TMC5130_Reg::VACTUAL);
+    int32_t xactual = tmc.getCurrentPosition();
+    float vactual = tmc.getCurrentSpeed();
 
     Serial.print("xpos,v:");
     Serial.print(xactual);
