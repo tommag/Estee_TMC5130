@@ -24,6 +24,8 @@ SOFTWARE.
 
 #include "Estee_TMC5130.h"
 
+//#define SERIAL_DEBUG
+
 Estee_TMC5130_UART::Estee_TMC5130_UART(Stream& serial, uint8_t slaveAddress, uint32_t fclk)
 : Estee_TMC5130(fclk), _serial(serial), _slaveAddress(slaveAddress)
 {
@@ -65,6 +67,13 @@ uint32_t Estee_TMC5130_UART::readRegister(uint8_t address, ReadStatus *status)
 	for (int i = 0; i < 4; i++)
 		data += (inBuffer[3+i] << ((3-i)*8));
 
+#ifdef SERIAL_DEBUG
+	Serial.print("Read 0x");
+	Serial.print(address, HEX);
+	Serial.print(": 0x");
+	Serial.println(data, HEX);
+#endif
+
 	if (status != nullptr)
 		*status = SUCCESS;
 	return data;
@@ -72,6 +81,13 @@ uint32_t Estee_TMC5130_UART::readRegister(uint8_t address, ReadStatus *status)
 
 uint8_t Estee_TMC5130_UART::writeRegister(uint8_t address, uint32_t data)
 {
+#ifdef SERIAL_DEBUG
+	Serial.print("Writing 0x");
+	Serial.print(address, HEX);
+	Serial.print(": 0x");
+	Serial.println(data, HEX);
+#endif
+
 	uint8_t buffer[8];
 	buffer[0] = SYNC_BYTE;
 	buffer[1] = _slaveAddress;
