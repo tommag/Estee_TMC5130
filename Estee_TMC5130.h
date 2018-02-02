@@ -141,6 +141,7 @@ public:
 	void resetCommunication(); // Reset communication with TMC5130 : pause activity on the serial bus.
 
 	void setSlaveAddress(uint8_t slaveAddress, bool NAI=true); // Set the slave address register. Take into account the TMC5130 NAI input (default to high). Range : 0 - 253 if NAI is low, 1 - 254 if NAI is high.
+	uint8_t getSlaveAddress() { return _slaveAddress; }
 
 	//TODO add optional internal checks (reg write counter, retry in case of bad CRC)
 
