@@ -49,17 +49,27 @@ bool Estee_TMC5130::begin( uint8_t ihold, uint8_t irun, MotorDirection stepper_d
 	// use position mode
 	setRampMode(POSITIONING_MODE);
 
-	// set chopper config
-	TMC5130_Reg::CHOPCONF_Register chopconf = { 0 };
-	chopconf.toff = 5;
-	chopconf.hend_offset = 1;
-	chopconf.tbl = 0b10;
-	writeRegister(TMC5130_Reg::CHOPCONF, chopconf.value);
-
 	TMC5130_Reg::GCONF_Register gconf = { 0 };
-	gconf.en_pwm_mode = true;
+	gconf.en_pwm_mode = true; //Enable stealthChop PWM mode
 	gconf.shaft = stepper_direction;
 	writeRegister(TMC5130_Reg::GCONF, gconf.value);
+
+	// Recommended settings in quick config guide
+	TMC5130_Reg::PWMCONF_Register pwmconf = { 0 };
+	pwmconf.pwm_autoscale = true;
+	pwmconf.pwm_grad = 1;
+	pwmconf.pwm_ampl = 255;
+	pwmconf.pwm_freq = 0b01; // recommended : 35kHz with internal typ. 13.2MHZ clock. 0b01 => 2/683 * f_clk = 38653Hz
+	writeRegister(TMC5130_Reg::PWMCONF, pwmconf.value);
+
+	// Recommended settings in quick config guide
+	TMC5130_Reg::CHOPCONF_Register chopconf = { 0 };
+	chopconf.toff = 4;
+	chopconf.tbl = 0b10;
+	chopconf.hstrt_tfd = 4;
+	chopconf.hend_offset = 0;
+	writeRegister(TMC5130_Reg::CHOPCONF, chopconf.value);
+
 
 	return false;
 }
