@@ -50,6 +50,13 @@ uint32_t Estee_TMC5130_UART::readRegister(uint8_t address, ReadStatus *status)
 	{
 		if (status != nullptr)
 			*status = NO_REPLY;
+
+#ifdef SERIAL_DEBUG
+		Serial.print("Read 0x");
+		Serial.print(address, HEX);
+		Serial.println(": No reply.");
+#endif
+
 		return 0xFFFFFFFF;
 	}
 
@@ -60,6 +67,13 @@ uint32_t Estee_TMC5130_UART::readRegister(uint8_t address, ReadStatus *status)
 	{
 		if (status != nullptr)
 			*status = BAD_CRC;
+
+#ifdef SERIAL_DEBUG
+		Serial.print("Read 0x");
+		Serial.print(address, HEX);
+		Serial.println(": Bad CRC.");
+#endif
+
 		return 0xFFFFFFFF;
 	}
 
@@ -118,7 +132,7 @@ void Estee_TMC5130_UART::resetCommunication()
 void Estee_TMC5130_UART::setSlaveAddress(uint8_t slaveAddress, bool NAI)
 {
 	TMC5130_Reg::SLAVECONF_Register slaveConf = { 0 };
-	slaveConf.senddelay = 2; // minimum if more than one slave is present.
+	slaveConf.senddelay = 4; // minimum if more than one slave is present.
 	slaveConf.slaveaddr = constrain(NAI ? slaveAddress-1 : slaveAddress, 0, 253); //NB : if NAI is high SLAVE_ADDR is incremented.
 
 	writeRegister(TMC5130_Reg::SLAVECONF, slaveConf.value);
