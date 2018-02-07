@@ -27,7 +27,7 @@ SOFTWARE.
 //#define SERIAL_DEBUG
 
 Estee_TMC5130_UART::Estee_TMC5130_UART(Stream& serial, uint8_t slaveAddress, uint32_t fclk)
-: Estee_TMC5130(fclk), _serial(serial), _slaveAddress(slaveAddress), _currentMode(STREAMING_MODE)
+: Estee_TMC5130(fclk), _serial(&serial), _slaveAddress(slaveAddress), _currentMode(STREAMING_MODE)
 {
 
 }
@@ -129,8 +129,8 @@ void Estee_TMC5130_UART::resetCommunication()
 #endif
 
 	//Flush input buffer.
-	while (_serial.available())
-		_serial.read();
+	while (_serial->available())
+		_serial->read();
 }
 
 void Estee_TMC5130_UART::setSlaveAddress(uint8_t slaveAddress, bool NAI)
@@ -187,12 +187,12 @@ uint32_t Estee_TMC5130_UART::_readReg(uint8_t address, ReadStatus *status)
 	computeCrc(outBuffer, 4);
 
 	beginTransmission();
-	_serial.write(outBuffer, 4);
+	_serial->write(outBuffer, 4);
 	endTransmission();
 
 	_readAttemptsCounter++;
 
-	if (_serial.readBytes(inBuffer, 8) != 8) //Stream.setTimeout has to be set to a decent value to avoid blocking
+	if (_serial->readBytes(inBuffer, 8) != 8) //Stream.setTimeout has to be set to a decent value to avoid blocking
 	{
 		if (status != nullptr)
 			*status = NO_REPLY;
@@ -266,7 +266,7 @@ void Estee_TMC5130_UART::_writeReg(uint8_t address, uint32_t data)
 #endif
 
 	beginTransmission();
-	_serial.write(buffer, 8);
+	_serial->write(buffer, 8);
 	endTransmission();
 }
 

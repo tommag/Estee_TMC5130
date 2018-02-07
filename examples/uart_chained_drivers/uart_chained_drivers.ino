@@ -68,13 +68,7 @@ SOFTWARE.
 const uint8_t UART_TX_EN = 5;   // Differential transceiver TX enable pin
 const int MAX_MOTOR_COUNT = 4;
 
-//Use Serial1 (hardware UART on Feather M0) ; address 1 (NAI input has a pull up resistor)
-Estee_TMC5130_UART_Transceiver motors[MAX_MOTOR_COUNT] = {
-  Estee_TMC5130_UART_Transceiver(UART_TX_EN, Serial1, 1),
-  Estee_TMC5130_UART_Transceiver(UART_TX_EN, Serial1, 1),
-  Estee_TMC5130_UART_Transceiver(UART_TX_EN, Serial1, 1),
-  Estee_TMC5130_UART_Transceiver(UART_TX_EN, Serial1, 1)
-};
+Estee_TMC5130_UART_Transceiver motors[MAX_MOTOR_COUNT];
 int motorCount = 0;
 
 void setup()
@@ -95,6 +89,9 @@ void setup()
   bool chainEnd = false;
   while (!chainEnd && motorCount < MAX_MOTOR_COUNT)
   {
+    //Use Serial1 (hardware UART on Feather M0) ; address 1 (NAI input has a pull up resistor)
+    motors[motorCount] = Estee_TMC5130_UART_Transceiver(UART_TX_EN, Serial1, 1);
+
     //Try to query a TMC5130 at address 1 (default)
     Estee_TMC5130_UART::ReadStatus readStatus;
     uint32_t gconf = motors[motorCount].readRegister(TMC5130_Reg::GCONF, &readStatus);

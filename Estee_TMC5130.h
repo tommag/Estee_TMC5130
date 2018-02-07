@@ -37,7 +37,7 @@ public:
 	enum MotorDirection { NORMAL_MOTOR_DIRECTION =	0x00, INVERSE_MOTOR_DIRECTION = 0x1 };
 	enum RampMode { POSITIONING_MODE, VELOCITY_MODE, HOLD_MODE };
 
-	Estee_TMC5130(uint32_t fclk=DEFAULT_F_CLK);
+	Estee_TMC5130(uint32_t fclk = DEFAULT_F_CLK);
 	~Estee_TMC5130();
 
 	// start/stop this module
@@ -77,7 +77,7 @@ protected:
 private:
 	uint32_t _fclk;
 	RampMode _currentRampMode;
-	const uint16_t _uStepCount = 256; // Number of microsteps per step
+	static constexpr uint16_t _uStepCount = 256; // Number of microsteps per step
 
 	// Following §14.1 Real world unit conversions
 	// v[Hz] = v[5130A] * ( f CLK [Hz]/2 / 2^23 )
@@ -96,9 +96,9 @@ private:
 class Estee_TMC5130_SPI : public Estee_TMC5130 {
 public:
 	Estee_TMC5130_SPI( uint8_t chipSelectPin,	// pin to use for the SPI bus SS line
-		uint32_t fclk=DEFAULT_F_CLK,
-		const SPISettings &spiSettings=SPISettings(1000000, MSBFIRST, SPI_MODE0), // spi bus settings to use
-		SPIClass& spi=SPI ); // spi class to use
+		uint32_t fclk = DEFAULT_F_CLK,
+		const SPISettings &spiSettings = SPISettings(1000000, MSBFIRST, SPI_MODE0), // spi bus settings to use
+		SPIClass& spi = SPI ); // spi class to use
 
 	uint32_t readRegister(uint8_t address);	// addresses are from TMC5130.h
 	uint8_t  writeRegister(uint8_t address, uint32_t data);
@@ -107,7 +107,7 @@ public:
 private:
 	uint8_t _CS;
 	SPISettings _spiSettings;
-	SPIClass &_spi;
+	SPIClass *_spi;
 
 	void _beginTransaction();
 	void _endTransaction();
@@ -137,9 +137,9 @@ public:
 	enum CommunicationMode {RELIABLE_MODE, STREAMING_MODE};
 
 
-	Estee_TMC5130_UART(Stream& serial=Serial, // Serial port to use
+	Estee_TMC5130_UART(Stream& serial = Serial, // Serial port to use
 		uint8_t slaveAddress = 0, // TMC5130 slave address (default 0 if NAI is low, 1 if NAI is high)
-		uint32_t fclk=DEFAULT_F_CLK);
+		uint32_t fclk = DEFAULT_F_CLK);
 
 	uint32_t readRegister(uint8_t address, ReadStatus *status);	// addresses are from TMC5130.h. Pass an optional status pointer to detect failures.
 	uint32_t readRegister(uint8_t address) { return readRegister(address, nullptr); }
@@ -158,10 +158,10 @@ public:
 	float getReadSuccessRate();
 	float getWriteSuccessRate();
 protected:
-	const uint8_t NB_RETRIES_READ = 3;
-	const uint8_t NB_RETRIES_WRITE = 3;
+	static constexpr uint8_t NB_RETRIES_READ = 3;
+	static constexpr uint8_t NB_RETRIES_WRITE = 3;
 
-	Stream &_serial;
+	Stream *_serial;
 	uint8_t _slaveAddress;
 	CommunicationMode _currentMode;
 	uint8_t _transmissionCounter;
@@ -180,7 +180,7 @@ protected:
 	void _writeReg(uint8_t address, uint32_t data);
 
 private:
-	const uint8_t SYNC_BYTE = 0x05;
+	static constexpr uint8_t SYNC_BYTE = 0x05;
 
 	void computeCrc(uint8_t *datagram, uint8_t datagramLength);
 };
@@ -201,10 +201,10 @@ private:
  */
 class Estee_TMC5130_UART_Transceiver : public Estee_TMC5130_UART {
 public:
-	Estee_TMC5130_UART_Transceiver(uint8_t txEnablePin, // pin to enable transmission on the external transceiver
-		Stream& serial=Serial, // Serial port to use
+	Estee_TMC5130_UART_Transceiver(uint8_t txEnablePin = -1, // pin to enable transmission on the external transceiver
+		Stream& serial = Serial, // Serial port to use
 		uint8_t slaveAddress = 0, // TMC5130 slave address (default 0 if NAI is low, 1 if NAI is high)
-		uint32_t fclk=DEFAULT_F_CLK)
+		uint32_t fclk = DEFAULT_F_CLK)
 	: Estee_TMC5130_UART(serial, slaveAddress, fclk), _txEn(txEnablePin)
 	{
 		pinMode(_txEn, OUTPUT);
@@ -218,7 +218,7 @@ protected:
 
 	void endTransmission()
 	{
-		_serial.flush();
+		_serial->flush();
 		digitalWrite(_txEn, LOW);
 	}
 
