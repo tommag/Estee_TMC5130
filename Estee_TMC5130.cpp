@@ -41,8 +41,8 @@ bool Estee_TMC5130::begin( uint8_t ihold, uint8_t irun, MotorDirection stepper_d
 {
 	// set initial currents and delay
 	TMC5130_Reg::IHOLD_IRUN_Register iholdrun = { 0 };
-	iholdrun.ihold = ihold;
-	iholdrun.irun = irun;
+	iholdrun.ihold = constrain(ihold, 0, 31);
+	iholdrun.irun = constrain(irun, 0, 31);
 	iholdrun.iholddelay = 7;
 	writeRegister(TMC5130_Reg::IHOLD_IRUN, iholdrun.value);
 
