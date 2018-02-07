@@ -27,12 +27,130 @@ SOFTWARE.
 //#define SERIAL_DEBUG
 
 Estee_TMC5130_UART::Estee_TMC5130_UART(Stream& serial, uint8_t slaveAddress, uint32_t fclk)
-: Estee_TMC5130(fclk), _serial(serial), _slaveAddress(slaveAddress)
+: Estee_TMC5130(fclk), _serial(serial), _slaveAddress(slaveAddress), _currentMode(STREAMING_MODE)
 {
 
 }
 
 uint32_t Estee_TMC5130_UART::readRegister(uint8_t address, ReadStatus *status)
+{
+	uint32_t data = 0xFFFFFFFF;
+
+	switch (_currentMode)
+	{
+		case STREAMING_MODE:
+			data = _readReg(address, status);
+			break;
+
+		case RELIABLE_MODE:
+		{
+			int retries = NB_RETRIES_READ;
+			ReadStatus readStatus = NO_REPLY; //Worst case. If there is no reply for all retries this should be notified to the user.
+			do {
+				ReadStatus trialStatus;
+				data = _readReg(address, &trialStatus);
+
+				if (trialStatus == SUCCESS || (readStatus == NO_REPLY && trialStatus != NO_REPLY))
+					readStatus = trialStatus;
+
+				if (trialStatus == NO_REPLY)
+					resetCommunication();
+
+				retries--;
+			} while (readStatus != SUCCESS && retries > 0);
+
+			if (status != nullptr)
+				*status = readStatus;
+
+			break;
+		}
+	}
+
+	return data;
+}
+
+uint8_t Estee_TMC5130_UART::writeRegister(uint8_t address, uint32_t data, ReadStatus *status)
+{
+	switch (_currentMode)
+	{
+		case STREAMING_MODE:
+			_writeReg(address, data);
+			if (status != nullptr)
+				*status = SUCCESS;
+			break;
+
+		case RELIABLE_MODE:
+		{
+			int retries = NB_RETRIES_WRITE;
+			ReadStatus writeStatus = NO_REPLY;
+			do {
+				_writeReg(address, data);
+
+				ReadStatus readStatus;
+				uint8_t counter = readRegister(TMC5130_Reg::IFCNT, &readStatus) & 0xFF;
+
+				if (readStatus != NO_REPLY)
+					writeStatus = readStatus;
+
+				if (readStatus == SUCCESS)
+				{
+					if (counter != _transmissionCounter + 1)
+						writeStatus = BAD_CRC;
+
+					_transmissionCounter = counter;
+				}
+
+			retries--;
+			} while (writeStatus != SUCCESS && retries > 0);
+
+			if (status != nullptr)
+				*status = writeStatus;
+
+			break;
+		}
+	}
+
+	return 0;
+}
+
+void Estee_TMC5130_UART::resetCommunication()
+{
+	//FIXME should take into account the previous baud rate !
+	// For now let's wait 1ms. The spec asks for ~75 bit times so this should be OK for baud rates > 75kbps
+	delay(1);
+
+#ifdef SERIAL_DEBUG
+	Serial.println("Resetting communication.");
+#endif
+
+	//Flush input buffer.
+	while (_serial.available())
+		_serial.read();
+}
+
+void Estee_TMC5130_UART::setSlaveAddress(uint8_t slaveAddress, bool NAI)
+{
+	TMC5130_Reg::SLAVECONF_Register slaveConf = { 0 };
+	slaveConf.senddelay = 4; // minimum if more than one slave is present.
+	slaveConf.slaveaddr = constrain(NAI ? slaveAddress-1 : slaveAddress, 0, 253); //NB : if NAI is high SLAVE_ADDR is incremented.
+
+	writeRegister(TMC5130_Reg::SLAVECONF, slaveConf.value);
+
+	_slaveAddress = NAI ? slaveConf.slaveaddr+1 : slaveConf.slaveaddr;
+}
+
+void Estee_TMC5130_UART::setCommunicationMode(Estee_TMC5130_UART::CommunicationMode mode)
+{
+	_currentMode = mode;
+
+	if (mode == RELIABLE_MODE)
+	{
+		//Initialize the 8-bit transmission counter.
+		_transmissionCounter = readRegister(TMC5130_Reg::IFCNT) & 0xFF;
+	}
+}
+
+uint32_t Estee_TMC5130_UART::_readReg(uint8_t address, ReadStatus *status)
 {
 	uint8_t outBuffer[4], inBuffer[8];
 
@@ -51,11 +169,11 @@ uint32_t Estee_TMC5130_UART::readRegister(uint8_t address, ReadStatus *status)
 		if (status != nullptr)
 			*status = NO_REPLY;
 
-#ifdef SERIAL_DEBUG
+	#ifdef SERIAL_DEBUG
 		Serial.print("Read 0x");
 		Serial.print(address, HEX);
 		Serial.println(": No reply.");
-#endif
+	#endif
 
 		return 0xFFFFFFFF;
 	}
@@ -68,11 +186,11 @@ uint32_t Estee_TMC5130_UART::readRegister(uint8_t address, ReadStatus *status)
 		if (status != nullptr)
 			*status = BAD_CRC;
 
-#ifdef SERIAL_DEBUG
+	#ifdef SERIAL_DEBUG
 		Serial.print("Read 0x");
 		Serial.print(address, HEX);
 		Serial.println(": Bad CRC.");
-#endif
+	#endif
 
 		return 0xFFFFFFFF;
 	}
@@ -81,19 +199,19 @@ uint32_t Estee_TMC5130_UART::readRegister(uint8_t address, ReadStatus *status)
 	for (int i = 0; i < 4; i++)
 		data += (inBuffer[3+i] << ((3-i)*8));
 
-#ifdef SERIAL_DEBUG
+	#ifdef SERIAL_DEBUG
 	Serial.print("Read 0x");
 	Serial.print(address, HEX);
 	Serial.print(": 0x");
 	Serial.println(data, HEX);
-#endif
+	#endif
 
 	if (status != nullptr)
 		*status = SUCCESS;
 	return data;
 }
 
-uint8_t Estee_TMC5130_UART::writeRegister(uint8_t address, uint32_t data)
+void Estee_TMC5130_UART::_writeReg(uint8_t address, uint32_t data)
 {
 #ifdef SERIAL_DEBUG
 	Serial.print("Writing 0x");
@@ -111,33 +229,15 @@ uint8_t Estee_TMC5130_UART::writeRegister(uint8_t address, uint32_t data)
 
 	computeCrc(buffer, 8);
 
+#if 0
+	//Intentional disturbation to test the reliable mode : change the CRC
+	if (random(256) < 64)
+		buffer[7]++;
+#endif
+
 	beginTransmission();
 	_serial.write(buffer, 8);
 	endTransmission();
-
-	return 0;
-}
-
-void Estee_TMC5130_UART::resetCommunication()
-{
-	//FIXME should take into account the previous baud rate !
-	// For now let's wait 1ms. The spec asks for ~75 bit times so this should be OK for baud rates > 75kbps
-	delay(1);
-
-	//Flush input buffer.
-	while (_serial.available())
-		_serial.read();
-}
-
-void Estee_TMC5130_UART::setSlaveAddress(uint8_t slaveAddress, bool NAI)
-{
-	TMC5130_Reg::SLAVECONF_Register slaveConf = { 0 };
-	slaveConf.senddelay = 4; // minimum if more than one slave is present.
-	slaveConf.slaveaddr = constrain(NAI ? slaveAddress-1 : slaveAddress, 0, 253); //NB : if NAI is high SLAVE_ADDR is incremented.
-
-	writeRegister(TMC5130_Reg::SLAVECONF, slaveConf.value);
-
-	_slaveAddress = NAI ? slaveConf.slaveaddr+1 : slaveConf.slaveaddr;
 }
 
 /* From Trinamic TMC5130A datasheet Rev. 1.14 / 2017-MAY-15 §5.2 */

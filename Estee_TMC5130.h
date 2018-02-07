@@ -127,8 +127,15 @@ private:
  */
 class Estee_TMC5130_UART : public Estee_TMC5130 {
 public:
-	/* Read register return codes */
+	/* Read/write register return codes */
 	enum ReadStatus {SUCCESS, NO_REPLY, BAD_CRC};
+
+	/* Serial communication modes. In normal mode, register writes are checked and
+	 * retried if necessary, and register reads are retried multiple times in case
+	 * of failure. In streaming mode, none of these checks are performed and register
+	 * read / writes are tried only once. Default is Streaming mode. */
+	enum CommunicationMode {RELIABLE_MODE, STREAMING_MODE};
+
 
 	Estee_TMC5130_UART(Stream& serial=Serial, // Serial port to use
 		uint8_t slaveAddress = 0, // TMC5130 slave address (default 0 if NAI is low, 1 if NAI is high)
@@ -136,22 +143,30 @@ public:
 
 	uint32_t readRegister(uint8_t address, ReadStatus *status);	// addresses are from TMC5130.h. Pass an optional status pointer to detect failures.
 	uint32_t readRegister(uint8_t address) { return readRegister(address, nullptr); }
-	uint8_t  writeRegister(uint8_t address, uint32_t data);
+	uint8_t  writeRegister(uint8_t address, uint32_t data, ReadStatus *status); // Pass an optional status pointer to detect failures.
+	uint8_t writeRegister(uint8_t address, uint32_t data) { return writeRegister(address, data, nullptr); }
 
 	void resetCommunication(); // Reset communication with TMC5130 : pause activity on the serial bus.
 
 	void setSlaveAddress(uint8_t slaveAddress, bool NAI=true); // Set the slave address register. Take into account the TMC5130 NAI input (default to high). Range : 0 - 253 if NAI is low, 1 - 254 if NAI is high.
 	uint8_t getSlaveAddress() { return _slaveAddress; }
 
-	//TODO add optional internal checks (reg write counter, retry in case of bad CRC)
-
+	void setCommunicationMode(CommunicationMode mode);
 
 protected:
+	const uint8_t NB_RETRIES_READ = 3;
+	const uint8_t NB_RETRIES_WRITE = 3;
+
 	Stream &_serial;
 	uint8_t _slaveAddress;
+	CommunicationMode _currentMode;
+	uint8_t _transmissionCounter;
 
 	virtual void beginTransmission() {}
 	virtual void endTransmission() {}
+
+	uint32_t _readReg(uint8_t address, ReadStatus *status);
+	void _writeReg(uint8_t address, uint32_t data);
 
 private:
 	const uint8_t SYNC_BYTE = 0x05;
