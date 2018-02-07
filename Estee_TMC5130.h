@@ -153,6 +153,10 @@ public:
 
 	void setCommunicationMode(CommunicationMode mode);
 
+	/* Register read / write statistics */
+	void resetCommunicationSuccessRate();
+	float getReadSuccessRate();
+	float getWriteSuccessRate();
 protected:
 	const uint8_t NB_RETRIES_READ = 3;
 	const uint8_t NB_RETRIES_WRITE = 3;
@@ -161,6 +165,13 @@ protected:
 	uint8_t _slaveAddress;
 	CommunicationMode _currentMode;
 	uint8_t _transmissionCounter;
+
+	/* Read / write fail statistics */
+	uint32_t _readAttemptsCounter;
+	uint32_t _readSuccessfulCounter;
+	uint32_t _writeAttemptsCounter;
+	uint32_t _writeSuccessfulCounter;
+
 
 	virtual void beginTransmission() {}
 	virtual void endTransmission() {}

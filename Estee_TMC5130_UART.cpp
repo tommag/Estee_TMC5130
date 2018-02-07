@@ -75,6 +75,7 @@ uint8_t Estee_TMC5130_UART::writeRegister(uint8_t address, uint32_t data, ReadSt
 	{
 		case STREAMING_MODE:
 			_writeReg(address, data);
+
 			if (status != nullptr)
 				*status = SUCCESS;
 			break;
@@ -85,6 +86,7 @@ uint8_t Estee_TMC5130_UART::writeRegister(uint8_t address, uint32_t data, ReadSt
 			ReadStatus writeStatus = NO_REPLY;
 			do {
 				_writeReg(address, data);
+				_writeAttemptsCounter++;
 
 				ReadStatus readStatus;
 				uint8_t counter = readRegister(TMC5130_Reg::IFCNT, &readStatus) & 0xFF;
@@ -105,6 +107,9 @@ uint8_t Estee_TMC5130_UART::writeRegister(uint8_t address, uint32_t data, ReadSt
 
 			if (status != nullptr)
 				*status = writeStatus;
+
+			if (writeStatus == SUCCESS)
+				_writeSuccessfulCounter++;
 
 			break;
 		}
@@ -150,6 +155,27 @@ void Estee_TMC5130_UART::setCommunicationMode(Estee_TMC5130_UART::CommunicationM
 	}
 }
 
+void Estee_TMC5130_UART::resetCommunicationSuccessRate()
+{
+	_readAttemptsCounter = _readSuccessfulCounter = _writeAttemptsCounter = _writeSuccessfulCounter = 0;
+}
+
+float Estee_TMC5130_UART::getReadSuccessRate()
+{
+	if (_readAttemptsCounter == 0)
+		return 0;
+
+	return (float)_readSuccessfulCounter / (float)_readAttemptsCounter;
+}
+
+float Estee_TMC5130_UART::getWriteSuccessRate()
+{
+	if (_writeAttemptsCounter == 0)
+		return 0;
+
+	return (float)_writeSuccessfulCounter / (float)_writeAttemptsCounter;
+}
+
 uint32_t Estee_TMC5130_UART::_readReg(uint8_t address, ReadStatus *status)
 {
 	uint8_t outBuffer[4], inBuffer[8];
@@ -163,6 +189,8 @@ uint32_t Estee_TMC5130_UART::_readReg(uint8_t address, ReadStatus *status)
 	beginTransmission();
 	_serial.write(outBuffer, 4);
 	endTransmission();
+
+	_readAttemptsCounter++;
 
 	if (_serial.readBytes(inBuffer, 8) != 8) //Stream.setTimeout has to be set to a decent value to avoid blocking
 	{
@@ -205,6 +233,8 @@ uint32_t Estee_TMC5130_UART::_readReg(uint8_t address, ReadStatus *status)
 	Serial.print(": 0x");
 	Serial.println(data, HEX);
 	#endif
+
+	_readSuccessfulCounter++;
 
 	if (status != nullptr)
 		*status = SUCCESS;

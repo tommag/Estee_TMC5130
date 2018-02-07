@@ -90,7 +90,15 @@ void setup()
   //Switch to streaming mode to send target positions at repeated intervals
   tmc.setCommunicationMode(Estee_TMC5130_UART::STREAMING_MODE);
 
-  Serial.println("starting up");
+  Serial.print("Write success rate : ");
+  Serial.print(tmc.getWriteSuccessRate() * 100.0);
+  Serial.println("%");
+
+  Serial.print("Read success rate : ");
+  Serial.print(tmc.getReadSuccessRate() * 100.0);
+  Serial.println("%");
+
+  Serial.println("Starting up");
 }
 
 void loop()
