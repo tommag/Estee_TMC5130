@@ -126,17 +126,30 @@ void Estee_TMC5130::setRampMode(Estee_TMC5130::RampMode mode)
 
 long Estee_TMC5130::getCurrentPosition()
 {
-	return readRegister(TMC5130_Reg::XACTUAL) / _uStepCount;
+	uint32_t uStepPos = readRegister(TMC5130_Reg::XACTUAL);
+
+	if (uStepPos == 0xFFFFFFFF)
+		return NAN;
+	else
+		return (int)uStepPos / _uStepCount;
 }
 
 long Estee_TMC5130::getTargetPosition()
 {
-	return readRegister(TMC5130_Reg::XTARGET) / _uStepCount;
+	uint32_t uStepPos = readRegister(TMC5130_Reg::XTARGET);
+
+	if (uStepPos == 0xFFFFFFFF)
+		return NAN;
+	else
+		return (int)uStepPos / _uStepCount;
 }
 
 float Estee_TMC5130::getCurrentSpeed()
 {
 	uint32_t data = readRegister(TMC5130_Reg::VACTUAL);
+
+	if (data == 0xFFFFFFFF)
+		return NAN;
 
 	// Returned data is 24-bits, signed => convert to 32-bits, signed.
 	if (bitRead(data, 23)) // highest bit set => negative value

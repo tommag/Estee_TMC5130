@@ -50,6 +50,7 @@ public:
     T operator++(int)              { T r = *this; ++*this; return r; }
     BitField &operator--()         { return *this = *this - 1; }
     T operator--(int)              { T r = *this; --*this; return r; }
+    size_t size() const            { return Bits; }
 
 private:
     T value_;
