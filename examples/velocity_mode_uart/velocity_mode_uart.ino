@@ -87,7 +87,7 @@ void setup()
 
   // ramp definition
   tmc.setRampMode(Estee_TMC5130::VELOCITY_MODE);
-  tmc.setAccelerations(1000, 0, 0, 0); //AMAX, DMAX, A1, D1. Only AMAX is used in velocity mode.
+  tmc.setAcceleration(1000);
 
   Serial.println("starting up");
 }

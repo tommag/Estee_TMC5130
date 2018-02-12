@@ -113,8 +113,7 @@ void setup()
         motors[motorCount].begin(10, 20, Estee_TMC5130::NORMAL_MOTOR_DIRECTION);
         motors[motorCount].setRampMode(Estee_TMC5130::POSITIONING_MODE);
         motors[motorCount].setMaxSpeed(200);
-        motors[motorCount].setRampSpeeds(0, 0.1, 100); //Start, stop, threshold speeds
-        motors[motorCount].setAccelerations(250, 350, 500, 700); //AMAX, DMAX, A1, D1
+        motors[motorCount].setAcceleration(500);
 
         //Turn on the bus switch to get access to the next board.
         motors[motorCount].writeRegister(TMC5130_Reg::IO_INPUT_OUTPUT, 0); //set NAO low

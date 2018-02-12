@@ -84,8 +84,7 @@ void setup()
   // ramp definition
   tmc.setRampMode(Estee_TMC5130_UART::POSITIONING_MODE);
   tmc.setMaxSpeed(200);
-  tmc.setRampSpeeds(0, 0.1, 100); //Start, stop, threshold speeds
-  tmc.setAccelerations(250, 350, 500, 700); //AMAX, DMAX, A1, D1
+  tmc.setAcceleration(500);
 
   //Switch to streaming mode to send target positions at repeated intervals
   tmc.setCommunicationMode(Estee_TMC5130_UART::STREAMING_MODE);

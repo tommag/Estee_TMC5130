@@ -70,6 +70,8 @@ bool Estee_TMC5130::begin( uint8_t ihold, uint8_t irun, MotorDirection stepper_d
 	chopconf.hend_offset = 0;
 	writeRegister(TMC5130_Reg::CHOPCONF, chopconf.value);
 
+	//Set default start, stop, threshold speeds.
+	setRampSpeeds(0, 0.1, 0); //Start, stop, threshold speeds
 
 	return false;
 }
@@ -183,6 +185,11 @@ void Estee_TMC5130::setRampSpeeds(float startSpeed, float stopSpeed, float trans
 	writeRegister(TMC5130_Reg::VSTART, speedFromHz(abs(startSpeed)));
 	writeRegister(TMC5130_Reg::VSTOP, speedFromHz(abs(stopSpeed)));
 	writeRegister(TMC5130_Reg::V_1, speedFromHz(abs(transitionSpeed)));
+}
+
+void Estee_TMC5130::setAcceleration(float maxAccel)
+{
+	setAccelerations(maxAccel, maxAccel, maxAccel, maxAccel);
 }
 
 void Estee_TMC5130::setAccelerations(float maxAccel, float maxDecel, float startAccel, float finalDecel)
