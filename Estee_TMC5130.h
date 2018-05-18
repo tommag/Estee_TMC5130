@@ -71,6 +71,16 @@ public:
 
 	void stop(); // Stop the current motion according to the set ramp mode and motion parameters. The max speed and start speed are set to 0 but the target position stays unchanged.
 
+	/* Set the speeds (in steps/second) at which the internal functions and modes will be turned on or off.
+	 * Below pwmThrs, "stealthChop" PWM mode is used.
+	 * Between pwmThrs and highThrs, "spreadCycle" classic mode is used.
+	 * Between coolThrs and highThrs, "spreadCycle" is used ; "coolStep" current reduction and "stallGuard" load measurement can be enabled.
+	 * Above highThrs, "constant Toff" mode and fullstep mode can be enabled.
+	 * See the TMC 5130 datasheet for details and optimization.
+	 * Setting a speed to 0 will disable this threshold.
+	 */
+	void setModeChangeSpeeds(float pwmThrs, float coolThrs, float highThrs);
+
 protected:
 	static constexpr uint8_t WRITE_ACCESS = 0x80;	//Register write access for spi / uart communication
 	static constexpr uint32_t DEFAULT_F_CLK = 13200000; // Typical internal clock frequency in Hz.
@@ -88,6 +98,9 @@ private:
 	// Following §14.1 Real world unit conversions
 	// a[Hz/s] = a[5130A] * f CLK [Hz]^2 / (512*256) / 2^24
 	long accelFromHz(float accelHz) { return (long)(accelHz / ((float)_fclk * (float)_fclk / (512.0*256.0) / (float)(1<<24)) * (float)_uStepCount); }
+
+	// See §12 Velocity based mode control
+	long thrsSpeedToTstep(float thrsSpeed) { return thrsSpeed != 0.0 ? (long)constrain((float)_fclk / (thrsSpeed * 256.0), 0, 1048575) : 0; }
 };
 
 

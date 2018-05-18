@@ -206,3 +206,10 @@ void Estee_TMC5130::stop()
 	writeRegister(TMC5130_Reg::VSTART, 0);
 	writeRegister(TMC5130_Reg::VMAX, 0);
 }
+
+void Estee_TMC5130::setModeChangeSpeeds(float pwmThrs, float coolThrs, float highThrs)
+{
+	writeRegister(TMC5130_Reg::TPWMTHRS, thrsSpeedToTstep(pwmThrs));
+	writeRegister(TMC5130_Reg::TCOOLTHRS, thrsSpeedToTstep(coolThrs));
+	writeRegister(TMC5130_Reg::THIGH, thrsSpeedToTstep(highThrs));
+}
