@@ -82,6 +82,10 @@ void Estee_TMC5130::end()
 	; // FIXME: try and shutdown motor/chips?
 }
 
+bool Estee_TMC5130::isLastReadSuccessful()
+{
+	return _lastRegisterReadSuccess;
+}
 
 // From "28.1 Using the Internal Clock", how to figure out the step/sec scaling value
 float Estee_TMC5130::updateFrequencyScaling()

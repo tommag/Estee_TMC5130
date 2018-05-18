@@ -80,6 +80,8 @@ uint32_t Estee_TMC5130_SPI::readRegister(uint8_t address)
 	value |= _spi->transfer(0x00);
 	_endTransaction();
 
+	_lastRegisterReadSuccess = true; // In SPI mode there is no way to know if the TMC5130 is plugged... 
+
 	return value;
 }
 

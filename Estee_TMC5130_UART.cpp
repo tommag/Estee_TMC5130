@@ -35,17 +35,18 @@ Estee_TMC5130_UART::Estee_TMC5130_UART(Stream& serial, uint8_t slaveAddress, uin
 uint32_t Estee_TMC5130_UART::readRegister(uint8_t address, ReadStatus *status)
 {
 	uint32_t data = 0xFFFFFFFF;
+	ReadStatus readStatus;
 
 	switch (_currentMode)
 	{
 		case STREAMING_MODE:
-			data = _readReg(address, status);
+			data = _readReg(address, &readStatus);
 			break;
 
 		case RELIABLE_MODE:
 		{
 			int retries = NB_RETRIES_READ;
-			ReadStatus readStatus = NO_REPLY; //Worst case. If there is no reply for all retries this should be notified to the user.
+			readStatus = NO_REPLY; //Worst case. If there is no reply for all retries this should be notified to the user.
 			do {
 				ReadStatus trialStatus;
 				data = _readReg(address, &trialStatus);
@@ -58,13 +59,14 @@ uint32_t Estee_TMC5130_UART::readRegister(uint8_t address, ReadStatus *status)
 
 				retries--;
 			} while (readStatus != SUCCESS && retries > 0);
-
-			if (status != nullptr)
-				*status = readStatus;
-
 			break;
 		}
 	}
+
+	if (status != nullptr)
+		*status = readStatus;
+
+	_lastRegisterReadSuccess = (readStatus == SUCCESS);
 
 	return data;
 }
@@ -201,6 +203,28 @@ uint32_t Estee_TMC5130_UART::_readReg(uint8_t address, ReadStatus *status)
 		Serial.print("Read 0x");
 		Serial.print(address, HEX);
 		Serial.println(": No reply.");
+	#endif
+
+		return 0xFFFFFFFF;
+	}
+
+	if (inBuffer[0] != SYNC_BYTE || inBuffer[1] != MASTER_ADDRESS || inBuffer[2] != address)
+	{
+		if (status != nullptr)
+			*status = INVALID_FORMAT;
+
+	#ifdef SERIAL_DEBUG
+		Serial.print("Read 0x");
+		Serial.print(address, HEX);
+		Serial.println(": Invalid answer format.");
+		Serial.print("{");
+		for (int i = 0; i < 8; i++)
+		{
+			Serial.print("0x");
+			Serial.print(inBuffer[i], HEX);
+			Serial.print(" ");
+		}
+		Serial.println("}");
 	#endif
 
 		return 0xFFFFFFFF;

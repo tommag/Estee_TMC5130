@@ -47,6 +47,13 @@ public:
 	virtual uint32_t readRegister(uint8_t address) = 0;	// addresses are from TMC5130.h
 	virtual uint8_t  writeRegister(uint8_t address, uint32_t data) = 0;
 
+	/* Check if the last register read was successful. This should be checked whenever
+	 a register read is used to take a decision.
+	 Reasons for failure can be : data bus disconnected, transmission error (bad CRC), etc
+	 This is mostly useful in UART mode.
+	 */
+	bool isLastReadSuccessful();
+
 	// internal clock measuring
 	// NOTE: Driver MUST BE DISABLED DURING THIS CALL
 	float updateFrequencyScaling();
@@ -84,6 +91,8 @@ public:
 protected:
 	static constexpr uint8_t WRITE_ACCESS = 0x80;	//Register write access for spi / uart communication
 	static constexpr uint32_t DEFAULT_F_CLK = 13200000; // Typical internal clock frequency in Hz.
+
+	bool _lastRegisterReadSuccess = false;
 
 private:
 	uint32_t _fclk;
@@ -142,9 +151,9 @@ private:
 class Estee_TMC5130_UART : public Estee_TMC5130 {
 public:
 	/* Read/write register return codes */
-	enum ReadStatus {SUCCESS, NO_REPLY, BAD_CRC};
+	enum ReadStatus {SUCCESS, NO_REPLY, INVALID_FORMAT, BAD_CRC};
 
-	/* Serial communication modes. In normal mode, register writes are checked and
+	/* Serial communication modes. In reliable mode, register writes are checked and
 	 * retried if necessary, and register reads are retried multiple times in case
 	 * of failure. In streaming mode, none of these checks are performed and register
 	 * read / writes are tried only once. Default is Streaming mode. */
@@ -195,6 +204,7 @@ protected:
 
 private:
 	static constexpr uint8_t SYNC_BYTE = 0x05;
+	static constexpr uint8_t MASTER_ADDRESS = 0xFF;
 
 	void computeCrc(uint8_t *datagram, uint8_t datagramLength);
 };

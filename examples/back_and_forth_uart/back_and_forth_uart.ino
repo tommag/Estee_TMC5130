@@ -124,12 +124,18 @@ void loop()
     // NB : reading out registers while they are changing is not recommended with UART interface and will probably fail.
     // See datasheet §5.1.2
     int32_t xactual = tmc.getCurrentPosition();
-    float vactual = tmc.getCurrentSpeed();
+    if (tmc.isLastReadSuccessful())
+    {
+      Serial.print("current position : ");
+      Serial.println(xactual);
+    }
 
-    Serial.print("xpos,v:");
-    Serial.print(xactual);
-    Serial.print(", ");
-    Serial.println(vactual);
+    float vactual = tmc.getCurrentSpeed();
+    if (tmc.isLastReadSuccessful())
+    {
+      Serial.print("current speed : ");
+      Serial.println(vactual);
+    }
   }
 
 }
