@@ -140,6 +140,36 @@ long Estee_TMC5130::getCurrentPosition()
 		return (int)uStepPos / _uStepCount;
 }
 
+long Estee_TMC5130::getEncoderPosition()
+{
+	uint32_t uStepPos = readRegister(TMC5130_Reg::X_ENC);
+
+	if (uStepPos == 0xFFFFFFFF)
+		return NAN;
+	else
+		return (int)uStepPos / _uStepCount;
+}
+
+long Estee_TMC5130::getLatchedPosition()
+{
+	uint32_t uStepPos = readRegister(TMC5130_Reg::XLATCH);
+
+	if (uStepPos == 0xFFFFFFFF)
+		return NAN;
+	else
+		return (int)uStepPos / _uStepCount;
+}
+
+long Estee_TMC5130::getLatchedEncoderPosition()
+{
+	uint32_t uStepPos = readRegister(TMC5130_Reg::ENC_LATCH);
+
+	if (uStepPos == 0xFFFFFFFF)
+		return NAN;
+	else
+		return (int)uStepPos / _uStepCount;
+}
+
 long Estee_TMC5130::getTargetPosition()
 {
 	uint32_t uStepPos = readRegister(TMC5130_Reg::XTARGET);
@@ -164,9 +194,12 @@ float Estee_TMC5130::getCurrentSpeed()
 	return speedToHz(data);
 }
 
-void Estee_TMC5130::setCurrentPosition(long position)
+void Estee_TMC5130::setCurrentPosition(long position, bool updateEncoderPos)
 {
 	writeRegister(TMC5130_Reg::XACTUAL, position * _uStepCount);
+
+	if (updateEncoderPos)
+		writeRegister(TMC5130_Reg::X_ENC, position * _uStepCount);
 }
 
 void Estee_TMC5130::setTargetPosition(long position)
@@ -216,4 +249,89 @@ void Estee_TMC5130::setModeChangeSpeeds(float pwmThrs, float coolThrs, float hig
 	writeRegister(TMC5130_Reg::TPWMTHRS, thrsSpeedToTstep(pwmThrs));
 	writeRegister(TMC5130_Reg::TCOOLTHRS, thrsSpeedToTstep(coolThrs));
 	writeRegister(TMC5130_Reg::THIGH, thrsSpeedToTstep(highThrs));
+}
+
+bool Estee_TMC5130::setEncoderResolution(int motorSteps, int encResolution, bool inverted)
+{
+	//See §22.2
+	float factor = (float)motorSteps * (float)_uStepCount / (float)encResolution;
+
+	//Check if the binary prescaler gives an exact match
+	if ((int)(factor * 65536.0f) * encResolution == motorSteps * _uStepCount * 65536)
+	{
+		TMC5130_Reg::ENCMODE_Register encmode = { 0 };
+		encmode.value = readRegister(TMC5130_Reg::ENCMODE);
+		encmode.enc_sel_decimal = false;
+		writeRegister(TMC5130_Reg::ENCMODE, encmode.value);
+
+		int32_t encConst = (int)(factor * 65536.0f);
+		if (inverted)
+			encConst = -encConst;
+		writeRegister(TMC5130_Reg::ENC_CONST, encConst);
+
+#if 0
+		Serial.println("Using binary mode");
+		Serial.print("Factor : 0x");
+		Serial.print(encConst, HEX);
+		Serial.print(" <=> ");
+		Serial.println((float)(encConst) / 65536.0f);
+#endif
+
+		return true;
+	}
+	else
+	{
+		TMC5130_Reg::ENCMODE_Register encmode = { 0 };
+		encmode.value = readRegister(TMC5130_Reg::ENCMODE);
+		encmode.enc_sel_decimal = true;
+		writeRegister(TMC5130_Reg::ENCMODE, encmode.value);
+
+		int integerPart = floor(factor);
+		int decimalPart = (int)((factor - (float)integerPart) * 10000.0f);
+		if (inverted)
+		{
+			integerPart = -integerPart;
+			decimalPart = 10000 - decimalPart;
+		}
+		int32_t encConst =  integerPart * 65536 + decimalPart;
+		writeRegister(TMC5130_Reg::ENC_CONST, encConst);
+
+#if 0
+		Serial.println("Using decimal mode");
+		Serial.print("Factor : 0x");
+		Serial.print(encConst, HEX);
+		Serial.print(" <=> ");
+		Serial.print(integerPart);
+		Serial.print(".");
+		Serial.println(decimalPart);
+#endif
+
+		//Check if the decimal prescaler gives an exact match. Floats have about 7 digits of precision so no worries here.
+		return ((int)(factor * 10000.0f) * encResolution == motorSteps * _uStepCount * 10000);
+	}
+}
+
+void Estee_TMC5130::setEncoderIndexConfiguration(TMC5130_Reg::ENCMODE_sensitivity_Values sensitivity, bool nActiveHigh, bool ignorePol, bool aActiveHigh, bool bActiveHigh)
+{
+	TMC5130_Reg::ENCMODE_Register encmode = { 0 };
+	encmode.value = readRegister(TMC5130_Reg::ENCMODE);
+
+	encmode.sensitivity = sensitivity;
+	encmode.pol_N = nActiveHigh;
+	encmode.ignore_AB = ignorePol;
+	encmode.pol_A = aActiveHigh;
+	encmode.pol_B = bActiveHigh;
+
+	writeRegister(TMC5130_Reg::ENCMODE, encmode.value);
+}
+
+void Estee_TMC5130::setEncoderLatching(bool enabled)
+{
+	TMC5130_Reg::ENCMODE_Register encmode = { 0 };
+	encmode.value = readRegister(TMC5130_Reg::ENCMODE);
+
+	encmode.latch_x_act = true;
+	encmode.clr_cont = enabled;
+
+	writeRegister(TMC5130_Reg::ENCMODE, encmode.value);
 }

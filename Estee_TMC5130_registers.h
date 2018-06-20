@@ -201,8 +201,7 @@ namespace TMC5130_Reg {
     BitField< 3> ignore_AB; // Ignore A and B polarity for N channel event
     BitField< 4> clr_cont; // Always latch or latch and clear X_ENC upon an N event
     BitField< 5> clr_once; // Latch or latch and clear X_ENC on the next N event following the write access
-    BitField< 6> pos_edge; // N channel event sensitivity
-    BitField< 7> neg_edge; // N channel event sensitivity
+    BitField< 6, 2> sensitivity; // N channel event sensitivity
     BitField< 8> clr_enc_x; // Clear encoder counter X_ENC upon N-event
     BitField< 9> latch_x_act; // Also latch XACTUAL position together with X_ENC.
     BitField<10> enc_sel_decimal; // Encoder prescaler divisor binary mode (0) / decimal mode (1)
@@ -288,6 +287,13 @@ namespace TMC5130_Reg {
     FREEWHEEL_ENABLED  = 0x01, // Freewheeling
     FREEWHEEL_SHORT_LS = 0x02, // Coil shorted using LS drivers
     FREEWHEEL_SHORT_HS = 0x03  // Coil shorted using HS drivers
+  };
+
+  enum ENCMODE_sensitivity_Values {
+    ENCODER_N_NO_EDGE       = 0x00, // N channel active while the N event is valid
+    ENCODER_N_RISING_EDGE   = 0x01, // N channel active when the N event is activated
+    ENCODER_N_FALLING_EDGE  = 0x02, // N channel active when the N event is de-activated
+    ENCODER_N_BOTH_EDGES    = 0x03  // N channel active on N event activation and de-activation
   };
 }
 

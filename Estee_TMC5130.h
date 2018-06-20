@@ -66,10 +66,14 @@ public:
 	void setRampMode(RampMode mode);
 
 	long getCurrentPosition(); // Return the current internal position (steps)
+	long getEncoderPosition(); // Return the current position according to the encoder counter (steps)
+	long getLatchedPosition(); // Return the position that was latched on the last ref switch / encoder event (steps)
+	long getLatchedEncoderPosition(); // Return the encoder position that was latched on the last encoder event (steps)
 	long getTargetPosition(); // Get the target position (steps)
 	float getCurrentSpeed(); // Return the current speed (steps / second)
 
-	void setCurrentPosition(long position); // Set the current internal position (steps)
+
+	void setCurrentPosition(long position, bool updateEncoderPos = false); // Set the current internal position (steps) and optionally update the encoder counter as well to keep them in sync.
 	void setTargetPosition(long position); // Set the target position /!\ Set all other motion profile parameters before
 	void setMaxSpeed(float speed); // Set the max speed VMAX (steps/second)
 	void setRampSpeeds(float startSpeed, float stopSpeed, float transitionSpeed); // Set the ramp start speed VSTART, ramp stop speed VSTOP, acceleration transition speed V1 (steps / second). /!\ Set VSTOP >= VSTART, VSTOP >= 0.1
@@ -77,6 +81,9 @@ public:
 	void setAccelerations(float maxAccel, float maxDecel, float startAccel, float finalDecel); // Set the ramp accelerations AMAX, DMAX, A1, D1 (steps / second^2) /!\ Do not set startAccel, finalDecel to 0 even if transitionSpeed = 0
 
 	void stop(); // Stop the current motion according to the set ramp mode and motion parameters. The max speed and start speed are set to 0 but the target position stays unchanged.
+
+	//TODO chopper config functions ?
+	//TODO driver status functions
 
 	/* Set the speeds (in steps/second) at which the internal functions and modes will be turned on or off.
 	 * Below pwmThrs, "stealthChop" PWM mode is used.
@@ -87,6 +94,40 @@ public:
 	 * Setting a speed to 0 will disable this threshold.
 	 */
 	void setModeChangeSpeeds(float pwmThrs, float coolThrs, float highThrs);
+
+	/* Set the encoder constant to match the motor and encoder resolutions.
+	 * This function will determine if the binary or decimal mode should be used
+	 * and return false if no exact match could be found (for example for an encoder
+	 * with a resolution of 360 and a motor with 200 steps per turn). In this case
+	 * the best approximation in decimal mode will be used.
+	 *
+	 * Params :
+	 * 		motorSteps : the number of steps per turn for the motor
+	 * 		encResolution : the actual encoder resolution (pulses per turn)
+	 * 		inverted : whether the encoder and motor rotations are inverted
+	 *
+	 * Return :
+	 * 		true if an exact match was found, false otherwise
+	 */
+	bool setEncoderResolution(int motorSteps, int encResolution, bool inverted = false);
+
+	/* Configure the encoder N event context.
+	 * Params :
+	 * 		sensitivity : set to one of ENCODER_N_NO_EDGE, ENCODER_N_RISING_EDGE, ENCODER_N_FALLING_EDGE, ENCODER_N_BOTH_EDGES
+	 * 		nActiveHigh : choose N signal polarity (true for active high)
+	 * 		ignorePol : if true, ignore A and B polarities to validate a N event
+	 * 		aActiveHigh : choose A signal polarity (true for active high) to validate a N event
+	 * 		bActiveHigh : choose B signal polarity (true for active high) to validate a N event
+	 */
+	void setEncoderIndexConfiguration(TMC5130_Reg::ENCMODE_sensitivity_Values sensitivity, bool nActiveHigh = true, bool ignorePol = true, bool aActiveHigh = false, bool bActiveHigh = false);
+
+	/* Enable/disable encoder and position latching on each encoder N event (on each revolution)
+	 * The difference between the 2 positions can then be compared regularly to check
+	 * for an external step loss.
+	 */
+	void setEncoderLatching(bool enabled);
+
+	//TODO end stops and stallguard config functions ?
 
 protected:
 	static constexpr uint8_t WRITE_ACCESS = 0x80;	//Register write access for spi / uart communication
