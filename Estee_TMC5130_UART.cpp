@@ -284,7 +284,7 @@ void Estee_TMC5130_UART::_writeReg(uint8_t address, uint32_t data)
 	computeCrc(buffer, 8);
 
 #if 0
-	//Intentional disturbation to test the reliable mode : change the CRC
+	//Intentional interference to test the reliable mode : change the CRC
 	if (random(256) < 64)
 		buffer[7]++;
 #endif
