@@ -290,7 +290,7 @@ bool Estee_TMC5130::setEncoderResolution(int motorSteps, int encResolution, bool
 		int decimalPart = (int)((factor - (float)integerPart) * 10000.0f);
 		if (inverted)
 		{
-			integerPart = -integerPart;
+			integerPart = 65535 - integerPart;
 			decimalPart = 10000 - decimalPart;
 		}
 		int32_t encConst =  integerPart * 65536 + decimalPart;
