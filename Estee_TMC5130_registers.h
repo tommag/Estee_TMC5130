@@ -131,7 +131,7 @@ namespace TMC5130_Reg {
   union SLAVECONF_Register {
     uint32_t value;
     BitField<0, 8> slaveaddr; // Address of unit for the UART interface. The address becomes incremented by one when the external address pin NAI is active.
-    BitField<8, 2> senddelay; // Number of bit times before replying to a register read in UART mode. Set > 1 with multiple slaves.
+    BitField<8, 4> senddelay; // Number of bit times before replying to a register read in UART mode. Set > 1 with multiple slaves.
   };
 
   /* Read input pins */
