@@ -278,12 +278,15 @@ public:
 protected:
 	void beginTransmission()
 	{
+		delayMicroseconds(50);
 		digitalWrite(_txEn, HIGH);
 	}
+
 
 	void endTransmission()
 	{
 		_serial->flush();
+		delayMicroseconds(10);
 		digitalWrite(_txEn, LOW);
 	}
 
