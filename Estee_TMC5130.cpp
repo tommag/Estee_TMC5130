@@ -307,7 +307,7 @@ bool Estee_TMC5130::setEncoderResolution(int motorSteps, int encResolution, bool
 #endif
 
 		//Check if the decimal prescaler gives an exact match. Floats have about 7 digits of precision so no worries here.
-		return ((int)(factor * 10000.0f) * encResolution == motorSteps * _uStepCount * 10000);
+		return ((int)(factor * 10000.0f) * encResolution == motorSteps * (int)_uStepCount * 10000);
 	}
 }
 
