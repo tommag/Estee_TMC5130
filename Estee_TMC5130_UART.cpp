@@ -188,6 +188,10 @@ uint32_t Estee_TMC5130_UART::_readReg(uint8_t address, ReadStatus *status)
 
 	computeCrc(outBuffer, 4);
 
+	//Flush input buffer.
+	while (_serial->available())
+		_serial->read();
+
 	beginTransmission();
 	_serial->write(outBuffer, 4);
 	endTransmission();

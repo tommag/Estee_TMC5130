@@ -278,8 +278,9 @@ public:
 protected:
 	void beginTransmission()
 	{
-		delayMicroseconds(50);
+		delayMicroseconds(1500);
 		digitalWrite(_txEn, HIGH);
+		delayMicroseconds(50);
 	}
 
 
