@@ -27,7 +27,7 @@ SOFTWARE.
 Estee_TMC5130_SPI::Estee_TMC5130_SPI( uint8_t chipSelectPin, uint32_t fclk, const SPISettings &spiSettings, SPIClass &spi )
 : Estee_TMC5130(fclk), _CS(chipSelectPin), _spiSettings(spiSettings), _spi(&spi)
 {
-
+	pinMode(chipSelectPin, OUTPUT);
 }
 
 #pragma mark -
